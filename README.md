@@ -38,7 +38,7 @@ white_list.csv: 从数据库中拷贝的白告警域名（使用时不需要，�
 
 **将需要分析的url写入urls文件夹下的urls.csv，根据自己代理软件修改craw_url函数下的代理端口后，运行Application.py文件即可**
 
-![](.\proxy.png)
+<img src=".\proxy.png" alt="image-20220823181522187"  />
 
 数据文件见**data文件夹**下：
 
