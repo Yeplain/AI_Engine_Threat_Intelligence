@@ -1,4 +1,5 @@
 # coding: UTF-8
+import random
 import numpy as np
 import torch
 from utils_fasttext import build_dataset, build_iterator_1, build_data_data
@@ -38,7 +39,8 @@ def is_chinese(string):
 def write_result(url, flag):
     """
     Write label result to the result_file
-    将分类结果写入result_file中：-2: 数据待处理  -1：访问出错  0：白名单  1：灰黑名单  2：诈骗网站
+    将分类结果写入result_file中：
+    -3: 爬取内容为空  -2: 数据待处理  -1：访问出错  0：白名单  1：灰黑名单  2：诈骗网站  3：域名失效
     """
     result = {'url': [url], 'label': flag}
     df = pd.DataFrame(result)
@@ -60,14 +62,21 @@ def craw_url(url):
         'http': 'http://127.0.0.1:7890'
     }
     title_str = ''
+
+    # noinspection PyBroadException
     try:
         resp = s.get('https://'+urll, verify=False, proxies=proxies, timeout=10)
-    except:
+    except Exception:
+        # noinspection PyBroadException
         try:
             resp = s.get('http://' + urll, verify=False, proxies=proxies, timeout=10)
-        except:
-            write_result(url, -1)
-            return -1
+        except Exception:
+            # noinspection PyBroadException
+            try:
+                resp = s.get('http://' + urll + '/index.php', verify=False, proxies=proxies, timeout=10)
+            except Exception:
+                write_result(url, -1)
+                return -1
     resp.encoding = "utf-8"
     if resp.status_code != 200:
         write_result(url, -1)
@@ -90,7 +99,7 @@ def craw_url(url):
         df.to_csv(features_file, mode='a', index=False, header=False, encoding='utf_8', sep='|')
         return 1
     else:
-        write_result(url, -1)
+        write_result(url, -3)
         return -1
 
 
@@ -100,11 +109,27 @@ def data_mining(original_urls):
     从source_urls中多线程爬取所有数据，作为原始特征
     """
     # anti-anti-spider 反反爬虫
-    headers = {
-        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)z \
-                    Chrome/103.0.0.0 Safari/537.36",
-        'Cookie': "buvid3=0C3F9901-0B4A-20F7-B743-F39956A904E533362infoc; innersign=0'"}
-    s.headers = headers
+    headers = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)z Chrome/103.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:30.0) Gecko/20100101 Firefox/30.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/537.75.14',
+        'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Win64; x64; Trident/6.0)',
+        'Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11) Gecko/20071127 Firefox/2.0.0.11',
+        'Opera/9.25 (Windows NT 5.1; U; en)',
+        'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322; .NET CLR 2.0.50727)',
+        'Mozilla/5.0 (compatible; Konqueror/3.5; Linux) KHTML/3.5.5 (like Gecko) (Kubuntu)',
+        'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.0.12) Gecko/20070731 Ubuntu/dapper-security Firefox/1.5.0.12',
+        'Lynx/2.8.5rel.1 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/1.2.9',
+        'Mozilla/5.0 (X11; Linux i686) AppleWebKit/535.7 (KHTML, like Gecko) Ubuntu/11.04 Chromium/16.0.912.77 Chrome/16.0.912.77 Safari/535.7',
+        'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:10.0) Gecko/20100101 Firefox/10.0 ']
+    head = random.choice(headers)
+    hh = {'User-Agent': head,
+          'Cookie': '__SESSION_NAME_ipm5=f1f06c8f8adc9f15a0bf4669126f2683; iqqtv_net_ipm5=f1f06c8f8adc9f15a0bf4669126f2683; iqqtv_net_referer=%2F; '
+                    'iqqtv_net=b644ea9b281750052754b580b83005f5; iqqtv_net_is_online=yUOFEtwQNVc3qMBs_%2Bix61AnRp3%2FEndKCniP%3Dqc%2FNVcJqUBqb%2FLn%'
+                    '2FcoD%2BRXMD7nwBFYlftK%2F%3DVS6qDBKsv_oq1GmOYiZ6'}
+    s.headers = hh
     logging.captureWarnings(True)
     # Multi-threading 多线程
     max_connections = 60
@@ -143,7 +168,8 @@ def data_cleaning_1(original_features):
     for index in original_features.index:
         if str(original_features['title'][index]).find('�') != -1:
             tt = str(original_features['title'][index]).replace('�', "")
-            if is_chinese(tt) is False or len(tt) <= 4:
+            ff = str(original_features['features_ori'][index])
+            if is_chinese(tt) is False or len(tt + ff) <= 15:
                 print('delete %s content' % original_features['title'][index])
                 write_result(str(original_features['url'][index]), -2)
                 del_list.append(index)
@@ -170,31 +196,31 @@ def data_cleaning_1(original_features):
             continue
         if str(original_features['title'][index]).find('没有找到站点') != -1:
             del_list.append(index)
-            write_result(str(original_features['url'][index]), -1)
+            write_result(str(original_features['url'][index]), 3)
             continue
         if str(original_features['title'][index]).find('站点创建成功') != -1:
             del_list.append(index)
-            write_result(str(original_features['url'][index]), -1)
+            write_result(str(original_features['url'][index]), 3)
             continue
         if str(original_features['title'][index]).find('404 Not Found') != -1:
             del_list.append(index)
-            write_result(str(original_features['url'][index]), -1)
+            write_result(str(original_features['url'][index]), 3)
             continue
         if str(original_features['title'][index]).find('抱歉，站点已暂停') != -1:
             del_list.append(index)
-            write_result(str(original_features['url'][index]), -1)
+            write_result(str(original_features['url'][index]), 3)
             continue
         if str(original_features['title'][index]).find('404页面') != -1:
             del_list.append(index)
-            write_result(str(original_features['url'][index]), -1)
+            write_result(str(original_features['url'][index]), 3)
             continue
         if str(original_features['title'][index]).find('无法访问此网站') != -1:
             del_list.append(index)
-            write_result(str(original_features['url'][index]), -1)
+            write_result(str(original_features['url'][index]), 3)
             continue
         if str(original_features['title'][index]).find('Welcome to nginx') != -1:
             del_list.append(index)
-            write_result(str(original_features['url'][index]), -1)
+            write_result(str(original_features['url'][index]), 3)
             continue
     data_new = original_features.drop(del_list, axis=0)
     data_new.to_csv(features_file_1, index=False, header=False, encoding='utf_8', sep='|')
