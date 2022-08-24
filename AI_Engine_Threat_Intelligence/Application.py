@@ -50,12 +50,17 @@ def craw_url(url):
     Craw title and hyperlink strings from the url, write to features_file
     爬取该url中标题和超链接的string信息，作为原始特征写入features_file
     """
+    # 使用http代理
+    proxies = {
+        'https': 'https://127.0.0.1:7890',
+        'http': 'http://127.0.0.1:7890'
+    }
     title_str = ''
     try:
-        resp = s.get('https://'+url, verify=False, timeout=2)
+        resp = s.get('https://'+url, verify=False, proxies=proxies, timeout=10)
     except:
         try:
-            resp = s.get('http://' + url, verify=False, timeout=2)
+            resp = s.get('http://' + url, verify=False, proxies=proxies, timeout=10)
         except:
             write_result(url, -1)
             return -1
@@ -76,7 +81,6 @@ def craw_url(url):
             continue
         link_info.append(a.string)
     if (title is not None) or (len(link_info) > 0):
-        print(url)
         a = {'url': [url], 'title': [title_str], 'feature_ori': [str(link_info)]}
         df = pd.DataFrame(a)
         df.to_csv(features_file, mode='a', index=False, header=False, encoding='utf_8', sep='|')
@@ -133,8 +137,7 @@ def data_cleaning_1(original_features):
     """
     del_list = []
     for index in original_features.index:
-        if str(original_features['title'][index]).find('�') != -1 or \
-                str(original_features['features_ori'][index]).find('�') != -1:
+        if str(original_features['title'][index]).find('�') != -1:
             print('delete %s content' % original_features['title'][index])
             write_result(str(original_features['url'][index]), -2)
             del_list.append(index)
@@ -161,15 +164,31 @@ def data_cleaning_1(original_features):
             continue
         if str(original_features['title'][index]).find('没有找到站点') != -1:
             del_list.append(index)
-            write_result(str(original_features['url'][index]), -2)
+            write_result(str(original_features['url'][index]), -1)
             continue
         if str(original_features['title'][index]).find('站点创建成功') != -1:
             del_list.append(index)
-            write_result(str(original_features['url'][index]), -2)
+            write_result(str(original_features['url'][index]), -1)
             continue
         if str(original_features['title'][index]).find('404 Not Found') != -1:
             del_list.append(index)
-            write_result(str(original_features['url'][index]), -2)
+            write_result(str(original_features['url'][index]), -1)
+            continue
+        if str(original_features['title'][index]).find('抱歉，站点已暂停') != -1:
+            del_list.append(index)
+            write_result(str(original_features['url'][index]), -1)
+            continue
+        if str(original_features['title'][index]).find('404页面') != -1:
+            del_list.append(index)
+            write_result(str(original_features['url'][index]), -1)
+            continue
+        if str(original_features['title'][index]).find('无法访问此网站') != -1:
+            del_list.append(index)
+            write_result(str(original_features['url'][index]), -1)
+            continue
+        if str(original_features['title'][index]).find('Welcome to nginx') != -1:
+            del_list.append(index)
+            write_result(str(original_features['url'][index]), -1)
             continue
     data_new = original_features.drop(del_list, axis=0)
     data_new.to_csv(features_file_1, index=False, header=False, encoding='utf_8', sep='|')
@@ -181,7 +200,7 @@ def data_cleaning_2():
     Clean the dirty characters
     清洗掉一些脏符号
     """
-    dirty_char = ['\t', '\n', '\r']
+    dirty_char = ['\t', '\n', '\r', '�', '[]']
     features = pd.read_csv(features_file_1, delimiter='|', encoding='utf_8', error_bad_lines=False)
     for index in features.index:
         tt = str(features['title'][index])
@@ -189,7 +208,7 @@ def data_cleaning_2():
         for word in dirty_char:
             tt = tt.replace(word, "")
             ff = ff.replace(word, "")
-        result = {'url': [features['url'][index]], 'title': [tt], 'features_ori':[ff]}
+        result = {'url': [features['url'][index]], 'title': [tt], 'features_ori': [ff]}
         df = pd.DataFrame(result)
         df.to_csv(features_file_2, mode='a', index=False, header=False, encoding='utf_8', sep='|')
     write_raw_index(features_file_2)
@@ -222,7 +241,7 @@ def pre_analysis_en(features):
     对英文网站进行预先分析，若有一些脏词汇，则直接分类
     """
     dirty_words = ['porn', 'fuck', 'sex', 'gay', 'uncensored', 'threesome', 'tits', 'anal',
-                   'gangbang', 'bdsm', '18+', 'pussy']
+                   'gangbang', 'bdsm', '18+', 'pussy', '3p']
     for index in features.index:
         flag = 0
         for word in dirty_words:
@@ -239,10 +258,11 @@ def pre_analysis_ch(features):
     对中文网站进行预先分析，若有一些脏词汇，则直接分类
     """
     del_list = []
-    dirty_words = ['色情', '强奸', '人妻', '乱伦', '里番', '高潮', '成人', '男同', '女优', '痴汉', '毛片'
-                   '啪啪', '欧美', '同性', '少妇', '无码', '自慰', '爆乳', '喷潮', '变态', '18禁',
-                   '色欲', '有码', '日韩', '国产', '性交', '毛片', '约炮', '性爱', '屁股', 'porn',
-                   'fuck', 'sex', 'gay', 'uncensored', 'threesome', 'tits', 'anal', 'gangbang', 'bdsm', '18+']
+    dirty_words = ['色情', '强奸', '人妻', '乱伦', '里番', '高潮', '成人', '男同', '女优', '痴汉', '毛片', '牲交',
+                   '啪啪', '欧美', '同性', '少妇', '无码', '自慰', '爆乳', '喷潮', '变态', '18禁', '群交', '射精',
+                   '色欲', '有码', '日韩', '国产', '性交', '毛片', '约炮', '性爱', '屁股', 'porn', '黄色', '做爱',
+                   'fuck', 'sex', 'gay', 'uncensored', 'threesome', 'tits', 'anal', 'gangbang', 'bdsm', '18+',
+                   'av', 'AV', '3P', 'SM', 'sm']
     for index in features.index:
         for word in dirty_words:
             if str(features['title'][index]).find(word) != -1 or \
