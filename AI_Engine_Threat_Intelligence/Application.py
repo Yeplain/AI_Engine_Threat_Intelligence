@@ -50,6 +50,10 @@ def craw_url(url):
     Craw title and hyperlink strings from the url, write to features_file
     爬取该url中标题和超链接的string信息，作为原始特征写入features_file
     """
+    # url预处理
+    urll = str(url).replace("https://", "")
+    urll = str(urll).replace("http://", "")
+
     # 使用http代理
     proxies = {
         'https': 'https://127.0.0.1:7890',
@@ -57,10 +61,10 @@ def craw_url(url):
     }
     title_str = ''
     try:
-        resp = s.get('https://'+url, verify=False, proxies=proxies, timeout=10)
+        resp = s.get('https://'+urll, verify=False, proxies=proxies, timeout=10)
     except:
         try:
-            resp = s.get('http://' + url, verify=False, proxies=proxies, timeout=10)
+            resp = s.get('http://' + urll, verify=False, proxies=proxies, timeout=10)
         except:
             write_result(url, -1)
             return -1
@@ -138,10 +142,12 @@ def data_cleaning_1(original_features):
     del_list = []
     for index in original_features.index:
         if str(original_features['title'][index]).find('�') != -1:
-            print('delete %s content' % original_features['title'][index])
-            write_result(str(original_features['url'][index]), -2)
-            del_list.append(index)
-            continue
+            tt = str(original_features['title'][index]).replace('�', "")
+            if is_chinese(tt) is False or len(tt) <= 4:
+                print('delete %s content' % original_features['title'][index])
+                write_result(str(original_features['url'][index]), -2)
+                del_list.append(index)
+                continue
         if str(original_features['title'][index]).find('江苏反诈公益宣传') != -1 or \
                     str(original_features['features_ori'][index]).find('江苏反诈公益宣传') != -1:
             del_list.append(index)

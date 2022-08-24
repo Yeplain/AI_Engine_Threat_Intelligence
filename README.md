@@ -20,17 +20,45 @@ pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 ## 文件目录
 
-文件主要可分为两个模块：
+文件主要可分为三个部分：
 
 **AI_Engine_Threat_Intelligence**：**端到端的威胁情报库AI引擎**
 
 **Spider**：爬取urls等域名信息的爬虫代码（使用时不需要，仅作为存档）
 
-两个url源文件：
+**url_list**: 两个url源文件 (使用时不需要)
 
-**black_gray_list.csv**：从数据库中拷贝的灰黑告警域名（使用时不需要，仅用于爬取）
+black_gray_list.csv：从数据库中拷贝的灰黑告警域名（使用时不需要，仅用于爬取）
 
-**white_list.csv**: 从数据库中拷贝的白告警域名（使用时不需要，仅用于爬取）
+white_list.csv: 从数据库中拷贝的白告警域名（使用时不需要，仅用于爬取）
+
+## AI引擎使用方法
+
+实现了**端到端**的AI引擎使用，即只需输入所需的url文件，即可输出经过AI引擎分析后的结果。
+
+**将需要分析的url写入urls文件夹下的urls.csv，根据自己代理软件修改craw_url函数下的代理端口后，运行Application.py文件即可**
+
+![](D:\shixi\model\proxy.png)
+
+数据文件见**data文件夹**下：
+
+1. urls文件夹：将需要分析的url写入urls.csv，以换行分隔，放置该目录下；
+2. features文件夹：对urls爬虫后，美一步数据清洗、数据预处理后生成的特征文件；
+3. results文件夹：results.txt 为最终分类结果，url与类别以￥分隔；
+
+具体在Application.py中可见定义：
+
+```python
+source_urls_file = './data/urls/urls.csv'  # 原始urls
+features_file = './data/features/original.csv'  # 爬虫后的原始特征数据
+features_file_1 = './data/features/features1.csv'  # 初步预处理后的数据
+features_file_2 = './data/features/features2.csv'  # 数据清洗后的数据
+features_en_file = './data/features/features_en.csv'  # 英文数据
+features_ch_file = './data/features/features_ch.csv'  # 中文数据
+model_analysis_file = './data/results/data_ori.csv'  # 需要使用AI模型分析的数据
+model_final_file = './data/results/data_final.txt'  # 送入AI模型分析的数据
+result_file = './data/results/results.txt'  # 最终分类结果
+```
 
 ## AI模型构建流程
 
@@ -40,9 +68,9 @@ pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 1. 从本地库获取到灰黑产告警和白告警的域名 ，即**black_gray_list.csv**和**white_list.csv**；
 
-2. 多线程爬虫脚本并发爬取对应网站的标题、跳转超链接名等信息
+2. 使用全局代理多线程爬虫脚本并发爬取对应网站的标题、跳转超链接名等信息；
 
-3. 存入csv文件中，作为情报库原始语料库
+3. 存入csv文件中，作为情报库原始语料库；
 
 #### 2. 数据预处理/数据清洗
 
@@ -66,7 +94,7 @@ pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 2. 具体模型结构见 **AI_Engine_Threat_Intelligence** 中的 **models**:
 
-<img src=".\models.png" alt="image-20220823181522187"  />
+<img src="D:\shixi\model\models.png" alt="image-20220823181522187"  />
 
 #### 6. 训练并优化模型参数
 
@@ -74,43 +102,15 @@ pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 ## AI引擎解析流程
 
-实现了**端到端**的AI引擎使用，即只需输入所需的url文件，即可输出经过AI引擎分析后的结果。
-
-#### 1. 使用方法
-
-**将需要分析的url写入urls文件夹下的urls.csv，运行Application.py文件即可**
-
-数据文件见**data文件夹**下：
-
-1. urls文件夹：将需要分析的url写入urls.csv，以换行分割，放置该目录下；
-2. features文件夹：对urls爬虫后，进一步数据清洗、数据预处理后生成的特征文件；
-3. results文件夹：results.txt 为最终分类结果，url与类别以￥分隔；
-
-具体在Application.py中可见定义：
-
-```python
-source_urls_file = './data/urls/urls.csv'  # 原始urls
-features_file = './data/features/original.csv'  # 爬虫后的原始特征数据
-features_file_1 = './data/features/features1.csv'  # 初步预处理后的数据
-features_file_2 = './data/features/features2.csv'  # 数据清洗后的数据
-features_en_file = './data/features/features_en.csv'  # 英文数据
-features_ch_file = './data/features/features_ch.csv'  # 中文数据
-model_analysis_file = './data/results/data_ori.csv'  # 需要使用AI模型分析的数据
-model_final_file = './data/results/data_final.txt'  # 送入AI模型分析的数据
-result_file = './data/results/results.txt'  # 最终分类结果
-```
-
-#### 2. 解析流程
-
 各个函数的作用均在Application.py中予以详细解释说明。
 
-##### 1. 数据挖掘阶段
+#### 1. 数据挖掘阶段
 
 **data_mining(urls_ori)**：
 
-使用多线程爬虫，爬取url中所有需要的信息，对于无法访问的网站，分类为-1
+在全局代理模式下，使用多线程爬虫并发爬取url中所有需要的信息，对于无法访问的网站，分类为-1
 
-##### 2. 数据清洗阶段
+#### 2. 数据清洗阶段
 
 **data_cleaning_1(features_ori)：**
 
@@ -124,7 +124,7 @@ result_file = './data/results/results.txt'  # 最终分类结果
 
 将网站分为英文和中文，分别进行处理
 
-##### 3. 预分析阶段
+#### 3. 预分析阶段
 
 **pre_analysis_en(features)：**
 
@@ -138,7 +138,7 @@ result_file = './data/results/results.txt'  # 最终分类结果
 
 生成最终送入模型的文件
 
-##### 4. AI模型分析阶段
+#### 4. AI模型分析阶段
 
 **model_analysis()：**
 
