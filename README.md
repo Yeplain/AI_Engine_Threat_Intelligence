@@ -38,7 +38,7 @@ white_list.csv: 从数据库中拷贝的白告警域名（使用时不需要，�
 
 **将需要分析的url写入urls文件夹下的urls.csv，根据自己代理软件修改craw_url函数下的代理端口后，运行Application.py文件即可**
 
-![](D:\shixi\model\proxy.png)
+![](.\proxy.png)
 
 数据文件见**data文件夹**下：
 
@@ -94,7 +94,7 @@ result_file = './data/results/results.txt'  # 最终分类结果
 
 2. 具体模型结构见 **AI_Engine_Threat_Intelligence** 中的 **models**:
 
-<img src="D:\shixi\model\models.png" alt="image-20220823181522187"  />
+<img src=".\models.png" alt="image-20220823181522187"  />
 
 #### 6. 训练并优化模型参数
 
