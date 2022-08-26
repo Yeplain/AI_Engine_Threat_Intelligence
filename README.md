@@ -36,7 +36,7 @@ conda config --show
 ​	所需环境见 **requirements.txt**
 
 ```shell
-conda install --yes --file requirements.txt
+conda install --yes --file ../requirements.txt
 ```
 
 按如上方式即可生成所有依赖。若如上方式出现错误，可采用如下方式安装依赖（**推荐**）：
@@ -76,7 +76,10 @@ conda install pytorch torchvision torchaudio cpuonly
 
 实现了**端到端**的AI引擎使用，即只需输入所需的url文件，即可输出经过AI引擎分析后的结果。
 
-**将需要分析的url写入urls文件夹下的urls.csv，根据自己的代理软件修改craw_url函数下的代理端口后，运行Application.py文件即可**（若不使用代理，则将代码中该部分注释）
+1. **将需要分析的url写入urls文件夹下的urls.csv；**
+2. **根据自己的代理软件修改craw_url函数下的代理端口**（若不使用代理，则将代码中该部分注释）**；**
+3. **运行Application.py文件；**
+4. **打开results文件夹下的 results.txt，即为最终结果；**
 
 ```python
 # 使用http代理
